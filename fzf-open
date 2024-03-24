@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-
-. "$script_dir"/regexes.sh
-
 usage="Usage: $(basename "$0")
-
 Uses a regex to extract matches from the current tmux pane. The matches are
 then passed to fzf for selection. The selected item is then passed to
 \`open_cmd\`. The default regex that is used will extract URLs and IP addresses
@@ -132,6 +127,13 @@ log_reset() {
     date >"$logfile"
 }
 
+log_error() {
+    msg="Error: $1"
+    echo "$msg" >&2
+    echo "$msg" >>"$logfile"
+    tmux display-message -d 2000 "$msg"
+}
+
 ################################################################################
 # Capture the content of the current tmux pane. The limit argument is used to
 # determine how many lines are captured. If the limit is 'screen', the entire
@@ -209,7 +211,7 @@ fzf_filter() {
         log "Preview is disabled."
     fi
     log "Filtering with command: $cmd"
-    eval "$cmd"
+    eval "$cmd" || log "Fzf exited with code: $?"
 }
 
 ################################################################################
@@ -224,19 +226,26 @@ open_multiple() {
 }
 
 main() {
-    local matches lines content
-    content="$(dirname "$(mktemp -u)")/fzf-open-content"
+    local matches lines content tmp_dir
+    tmp_dir="$(dirname "$(mktemp -u)")"
+    content="$tmp_dir/fzf-open-content"
+
     matches=$(capture_pane "$limit" | tee "$content" | find_matches "$regex|$extra_regex")
+
     if [[ -z $matches ]]; then
         log "No matches found."
-        tmux display-message "No matches found."
+        tmux display-message -d 1000 "No matches found."
     else
         lines=$(split_lines <<<"$matches")
         split_items <<<"$matches" | fzf_filter "$lines" "$content" | open_multiple
     fi
 }
 
-regex="$RE_URL|$RE_WWW|$RE_IP"
+re_url='(https?|ftp|file):/?//[-A-Za-z0-9+&@#/%?=~_|!:,.;]*[-A-Za-z0-9+&@#/%=~_|]'
+re_www='(http://|https://)?www\.[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}(/\S+)*'
+re_ip='[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,5})?(/\S+)*'
+
+regex="$re_url|$re_www|$re_ip"
 extra_regex=""
 limit="screen"
 open_cmd="${BROWSER:-""}"
@@ -248,4 +257,4 @@ logfile="$(dirname "$(mktemp -u)")/fzf-open.log"
 
 log_reset
 parse_args "$@"
-main || true
+main
