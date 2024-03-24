@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd -P)
+
 usage="Usage: $(basename "$0")
 Uses a regex to extract matches from the current tmux pane. The matches are
 then passed to fzf for selection. The selected item is then passed to
@@ -127,11 +129,31 @@ log_reset() {
     date >"$logfile"
 }
 
+################################################################################
+# Log an error message to stderr and the logfile. The message is also displayed
+# in a tmux message.
+################################################################################
 log_error() {
     msg="Error: $1"
     echo "$msg" >&2
     echo "$msg" >>"$logfile"
     tmux display-message -d 2000 "$msg"
+}
+
+################################################################################
+# Perform checks on the global variables. If one of them is not set correctly,
+# an error message is logged and 1 is returned.
+################################################################################
+check() {
+    local msg=""
+    [[ -n $regex ]] || msg+="No regex is set. "
+    [[ -n $limit ]] || msg+="No limit is set. "
+    [[ -n $open_cmd ]] || msg+="No open_cmd is set. "
+
+    if [[ $msg ]]; then
+        log_error "$msg"
+        return 1
+    fi
 }
 
 ################################################################################
@@ -221,8 +243,8 @@ fzf_filter() {
 open_multiple() {
     while read -r chosen; do
         log "Opening: $chosen"
-        eval "$open_cmd '$chosen'" >>"$logfile" &
-    done
+        eval "$open_cmd '$chosen'" &
+    done 2>&1 | log
 }
 
 main() {
@@ -231,6 +253,7 @@ main() {
     content="$tmp_dir/fzf-open-content"
 
     matches=$(capture_pane "$limit" | tee "$content" | find_matches "$regex|$extra_regex")
+    log "Matches: $matches"
 
     if [[ -z $matches ]]; then
         log "No matches found."
@@ -257,4 +280,4 @@ logfile="$(dirname "$(mktemp -u)")/fzf-open.log"
 
 log_reset
 parse_args "$@"
-main
+check && main || log_error "An error occurred. Check $logfile for more information."
