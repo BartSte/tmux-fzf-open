@@ -80,6 +80,11 @@ parse_args() {
             log "Using sort command: $sort_cmd"
             shift
             ;;
+        -f | --fzf-opts)
+            fzf_opts=$2
+            log "Using fzf options: $fzf_opts"
+            shift
+            ;;
         -p | --preview)
             preview=true
             log "Preview is enabled."
@@ -267,7 +272,6 @@ main() {
 re_url='(https?|ftp|file):/?//[-A-Za-z0-9+&@#/%?=~_|!:,.;]*[-A-Za-z0-9+&@#/%=~_|]'
 re_www='(http://|https://)?www\.[a-zA-Z](-?[a-zA-Z0-9])+\.[a-zA-Z]{2,}(/\S+)*'
 re_ip='[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(:[0-9]{1,5})?(/\S+)*'
-
 regex="$re_url|$re_www|$re_ip"
 extra_regex=""
 limit="screen"
