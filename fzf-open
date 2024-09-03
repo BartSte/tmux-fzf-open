@@ -15,7 +15,7 @@ Options:
 
   -r, --regex <regex>  
     The regex that is used to extract matches from the current tmux pane. The
-    default regex extracts URLs and IP addresses. It can be found in regexes.sh.
+    default regex extracts URLs and IP addresses.
 
   -e, --regex-extra <regex_extra>
     Extend the regex defined by \`--regex\` with this extra regex. If \`--regex\`
