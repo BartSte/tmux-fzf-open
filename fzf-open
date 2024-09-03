@@ -169,7 +169,7 @@ check() {
 ################################################################################
 capture_pane() {
     local limit=$1
-    local cmd="tmux capture-pane -J -p -e"
+    local cmd="tmux capture-pane -Jp"
     if [[ $limit != 'screen' ]]; then
         cmd="$cmd -S -$limit"
     fi
